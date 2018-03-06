@@ -41,7 +41,7 @@ vb.autoRange()
 #view.setRange(QtCore.QRectF(0, 0, 600, 600))
 
 ## Create random image
-stream = cv2.VideoCapture('/home/me/data/videopig/results/dragx-GOPR9919.MP4')
+stream = cv2.VideoCapture('/home/me/data/video_pig/march31_demo_data/results/corrosion-0465_clip.mp4')
 data = np.random.normal(size=(15, 600, 600), loc=1024, scale=64).astype(np.uint16)
 i = 0
 
