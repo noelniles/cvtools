@@ -18,8 +18,7 @@ class Lab(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.image_view.setAcceptDrops(True)
         self.image_view.installEventFilter(self)
-        pg.setConfigOptions(imageAxisOrder='row-major')
-
+        self.image_view.getImageItem().setOpts(axisOrder='row-major')
 
     def eventFilter(self, obj, ev):
         if obj is self.image_view:
@@ -30,7 +29,7 @@ class Lab(QMainWindow, Ui_MainWindow):
                     url = ev.mimeData().urls()[0]
                     img = cv2.imread(url.path())
                     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-                    img = img.T
+                    #img = img.T
                     self.image_view.setImage(img)
         return False
 
