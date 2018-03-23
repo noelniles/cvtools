@@ -19,11 +19,11 @@ from skimage.feature import plot_matches
 
 from skimage.feature import ORB
 from skimage.feature import BRIEF
-from skimage.feature import CENSURE
 from skimage import transform as tf
 
 from aligner_interface import Ui_MainWindow
-
+from alignment_methods import keypoints_and_descriptors_brief
+from alignment_methods import keypoints_censure
 
 class Aligner(QMainWindow, Ui_MainWindow):
     
@@ -79,7 +79,6 @@ class Aligner(QMainWindow, Ui_MainWindow):
 
     def paintEvent(self, event):
         for point in self.control_points:
-            self.reference_image_view.clear()
             self.reference_image_view.addItem(pg.CircleROI(point, 5))
             print('drawing ellipse at ', point)
 
@@ -95,7 +94,8 @@ class Aligner(QMainWindow, Ui_MainWindow):
                 links.append(path)
 
             self.open_images(links, location=location)
-        if event_type == QEvent.MouseButtonDblClick:
+
+        elif event_type == QEvent.MouseButtonDblClick:
             if location == self.ref_imitem:
                 self.control_points.append(event.pos() - self.mouse_offset)
                 self.update()
@@ -122,51 +122,9 @@ class Aligner(QMainWindow, Ui_MainWindow):
             elif location == self.offset_imitem:
                 self.offset_img = img
 
-    def register_censure(self, src, dst):
-        censure = CENSURE(mode='STAR')
-        censure.detect(src)
-        src_keypoints = censure.keypoints
-
-        censure.detect(dst)
-        dst_keypoints = censure.keypoints
-
-        self.show_keypoints(self.ref_viewbox, src_keypoints)
-        self.show_keypoints(self.offset_viewbox, dst_keypoints)
-
-    def register_brief(self, src, dst):
-        extractor = BRIEF(patch_size=5)
-        src_gray, dst_gray = src, dst
-
-        src_keypoints = corner_peaks(corner_harris(src_gray), min_distance=1)
-        dst_keypoints = corner_peaks(corner_harris(dst_gray), min_distance=1)
-
-        extractor.extract(src_gray, src_keypoints)
-        src_keypoints = src_keypoints[extractor.mask]
-        src_descriptors = extractor.descriptors
-
-        # Get the offset keypoints.
-        extractor.extract(dst_gray, dst_keypoints)
-        dst_keypoints = dst_keypoints[extractor.mask]
-        dst_descriptors = extractor.descriptors
-
-        # Get the matches
-        matches = match_descriptors(src_descriptors, dst_descriptors,
-            metric='hamming', cross_check=True)
-
-        src_matches = src_keypoints[matches[:, 0]]
-        dst_matches = dst_keypoints[matches[:, 1]]
-
-        self.show_matches(self.ref_viewbox, src_matches)
-        self.show_matches(self.offset_viewbox, dst_matches)
-
-    def show_keypoints(self, viewbox, keypoints):
-        for k in keypoints:
-            print(k)
-            viewbox.addItem(pg.CircleROI(k, 5))
-
-    def show_matches(self, viewbox, matches):
-        for m in matches:
-            viewbox.addItem(pg.CircleROI(m, 5))
+    def draw_points(self, viewbox, pointlist):
+        for point in pointlist:
+            viewbox.addItem(pg.CircleROI(point, 5))
 
     def process(self):
         assert self.ref_img is not None, 'Reference image is empty'
@@ -174,13 +132,16 @@ class Aligner(QMainWindow, Ui_MainWindow):
 
         self.get_form_values()
 
-        src_gray = rgb2gray(self.ref_img)
-        dst_gray = rgb2gray(self.offset_img)
-
         if self.algorithm_name == 'BRIEF':
-            self.register_brief(src_gray, dst_gray)
+            kps1, descs1 = keypoints_and_descriptors_brief(self.ref_img)
+            kps2, descs2 = keypoints_and_descriptors_brief(self.offset_img)
+            self.draw_points(self.ref_viewbox, kps1)
+            self.draw_points(self.offset_viewbox, kps2)
         elif self.algorithm_name == 'CENSURE':
-            self.register_censure(src_gray, dst_gray)
+            kps1 = keypoints_censure(self.ref_img)
+            kps2 = keypoints_censure(self.offset_img)
+            self.draw_points(self.ref_viewbox, kps1)
+            self.draw_points(self.offset_viewbox, kps2)
 
 def main():
     qapp = QApplication(sys.argv)
